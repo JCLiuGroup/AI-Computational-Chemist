@@ -16,7 +16,7 @@ manuscript + SI + reviews (+ original calculation archive)
   -> response package: letter paragraphs, SI tables/figures  [human approves the draft]
 ```
 
-Two hard rules make it trustworthy: new calculations must match the manuscript's method fingerprint (or disclose the deviation), and results that *contradict* the manuscript stop automation and go to the authors — never buried, never spun.
+Two hard rules make it trustworthy: new calculations must match the manuscript's method fingerprint (or disclose the deviation), and results that *contradict* the manuscript are never buried or spun. Semi-automatic mode stops for author review; explicitly requested autonomous mode records the contradiction prominently and continues with a draft.
 
 ## Research orchestration layer
 
@@ -26,6 +26,7 @@ The project state is intentionally separate from the scientific and tool knowled
 
 - `.research/project.yaml` records project metadata, assumptions, approvals, and high-level status.
 - `.research/tasks/*.yaml` records task nodes: dependencies, success criteria, `skill`, `required_refs`, `knowledge_required`, `required_checks`, and output artifacts.
+- `.research/jobs/*.json` records authoritative scheduler-attempt history.
 - `.research/artifacts.jsonl`, `decisions.jsonl`, and `events.jsonl` preserve evidence, reasoning decisions, and workflow history.
 - `.research/leases/*.json` prevents multiple agents from owning the same expensive execution task.
 
@@ -48,14 +49,16 @@ exploratory; the gate then focuses on internal geometric and chemical plausibili
 ```text
 AGENTS.md                      global guardrails + routing (load into every session)
 STRUCTURE.md                   the organization convention (read before adding content)
+aicc/                          optional standalone CLI extension
 procedures/                    orchestrators - how work is driven (agent skills)
   review-response/             flagship: manuscript + reviews -> validated response package
-  comp-chem-workflow/          lifecycle controller: state tracking, validation ladder, approval breakpoints
+  comp-chem-workflow/          scientific lifecycle and cross-engine validation controller
   literature-to-calculation/   third-party paper / SI / report -> concrete calculation target
-  research-orchestrator/       machine-readable project state: task DAG, artifacts, decisions, ready/blocked
+  research-orchestrator/       durable state: task DAG, gates, artifacts, leases/jobs, ready/blocked
 knowledge/                     tool-agnostic science + practice (flat reference library; not skills)
   machine-learning-potentials.md MLP concepts and cross-code comparison
   electrochemistry.md          CHE step diagrams, SHE/RHE/pH corrections, constant-potential concepts
+  surface-pourbaix.md          surface-state thermodynamics, dissolution, SHE/RHE and phase-map audits
 tools/                         per-code skills - how each tool is operated
   structure-prep/              periodic (pymatgen) + molecular (RDKit) structure preparation
   vasp/                        static, relax, electronic, reaction/NEB, CHE/VASPsol/VASPsol++ electrochemistry
@@ -74,10 +77,12 @@ tools/                         per-code skills - how each tool is operated
   hpc-submit/                  local / SSH / Slurm / PBS execution
   rsess/                       persistent remote shell sessions (tmux on the remote)
   report/                      assemble the near-submission .docx report / response package
-benchmark/                     the peer-review-replication benchmark (cases, rubric, evaluations)
+benchmark/                     published benchmark archive (cases, rubric, evaluations)
+LICENSE                        license terms
+CITATION.cff                   citation metadata
 ```
 
-The three top-level kinds are distinct: **procedures/** drive multi-step work, **tools/** operate a specific code, **knowledge/** is tool-agnostic science and practice the others draw on (read it for ideas, adapt freely — it is not a skill). Program families can have both layers: for example `knowledge/machine-learning-potentials.md` explains MLP concepts across DeePMD, MACE, NequIP, GPUMD, LASP, GemNet-OC, and EquiformerV2, while `tools/deepmd/` contains DeePMD-kit-specific commands and validation; `knowledge/force-fields.md` and `knowledge/molecular-dynamics.md` explain classical MD model choice, sampling, and trajectory interpretation, while `tools/gromacs/` and `tools/lammps/` contain engine-specific setup and validation; `knowledge/electrochemistry.md` explains CHE/constant-potential concepts, while `tools/vasp/references/electrochemistry.md` contains VASP/VASPsol execution details. Every procedure/tool skill follows the same structure (see `STRUCTURE.md`): `SKILL.md` is a short table of contents; detail lives in `references/` (`running.md`, `validation.md`, `errors.md`, `resources.md`, plus topic files), verified worked cases in `examples/`, and deterministic helpers in `scripts/` (preflight checks and output parsers that exit non-zero on failure). Each skill owns its full life cycle — setup, preflight, error recovery, and output parsing; the cross-engine validation ladder lives in `comp-chem-workflow`.
+The three top-level content kinds are distinct: **procedures/** drive multi-step work, **tools/** operate a specific code, **knowledge/** is tool-agnostic science and practice the others draw on (read it for ideas, adapt freely — it is not a skill). Program families can have both layers: for example `knowledge/machine-learning-potentials.md` explains MLP concepts across DeePMD, MACE, NequIP, GPUMD, LASP, GemNet-OC, and EquiformerV2, while `tools/deepmd/` contains DeePMD-kit-specific commands and validation; `knowledge/force-fields.md` and `knowledge/molecular-dynamics.md` explain classical MD model choice, sampling, and trajectory interpretation, while `tools/gromacs/` and `tools/lammps/` contain engine-specific setup and validation; `knowledge/electrochemistry.md` explains CHE/constant-potential concepts, while `tools/vasp/references/electrochemistry.md` contains VASP/VASPsol execution details. Every procedure/tool skill follows the same structure (see `STRUCTURE.md`): `SKILL.md` is a short table of contents; detail lives in `references/` (`running.md`, `validation.md`, `errors.md`, `resources.md`, plus topic files), example contribution rules and any verified cases live in `examples/`, and deterministic helpers live in `scripts/` (preflight checks and output parsers that exit non-zero on failure). Each skill owns its full life cycle — setup, preflight, error recovery, and output parsing; the cross-engine validation ladder lives in `comp-chem-workflow`.
 
 ## Installation
 
@@ -88,7 +93,22 @@ Use the installer for normal setup:
 ./install.sh --target ~/.claude/skills --harness claude --project /path/to/work
 ```
 
-The installer deploys this skill collection only. It does not install VASP, VASPKIT, OVITO, Gaussian, GROMACS, LAMMPS, pseudopotentials, basis sets, or licensed data.
+The installer also provides an optional, lightweight `aicc` CLI under
+`~/.local/bin`. It is a convenience layer for project status, task/lease operations,
+recorded jobs, skill management, and installation diagnostics; the skills remain usable
+without it.
+
+```bash
+aicc --help
+aicc status PROJECT
+aicc job --help
+aicc skill --help
+aicc doctor
+```
+
+Use each command's `--help` for its current interface. The CLI does not install or
+replace scientific engines, scheduler software, potentials, basis sets, or licensed
+data.
 
 **Runtime for helper scripts** — install [`uv`](https://docs.astral.sh/uv/). The Python helpers in `scripts/` that need third-party packages (pymatgen, rdkit, ovito) declare those deps inline (PEP 723) and are run with `uv run script.py …`: uv resolves a **per-script** isolated, cached environment, so tools with conflicting requirements never clash and there is no host-environment to match. Pure-stdlib helpers (output parsers, preflight checks) need nothing beyond Python.
 

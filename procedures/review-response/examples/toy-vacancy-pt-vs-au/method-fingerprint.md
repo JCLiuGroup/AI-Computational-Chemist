@@ -1,6 +1,7 @@
 # Method fingerprint
 
 - **origin:** designed — experimental manuscript, nothing to extract (mode B)
+- **reproduction_mode:** exploration
 - **note:** integration-test fixture. The method is a **toy** (ASE-EMT) chosen so the
   whole pipeline runs anywhere in seconds with no DFT engine or cluster. In a real
   response this would hold the field-convention DFT settings.

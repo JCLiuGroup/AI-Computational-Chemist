@@ -382,10 +382,11 @@ uv run tools/deepmd/scripts/deepmd_descriptor_pca.py \
   --skip-extract --skip-pca
 ```
 
-Keep the command, environment, and summaries as provenance. Missing diagnostics or a
-failed QA verdict keep the model at pilot/incomplete status unless the user explicitly
-accepts a pilot/waiver state. A passing verdict permits technical handoff to the next
-approved stage; it does not replace physics/stability checks for the target observable.
+Keep the command, environment, and summaries as provenance. Apply the maturity and
+legal `.research` status mapping in `references/validation.md`; `pilot/incomplete` is
+never a persisted workflow status. A passing verdict permits technical handoff to the
+next approved stage; it does not replace physics/stability checks for the target
+observable.
 
 ## LAMMPS DPMD deployment
 

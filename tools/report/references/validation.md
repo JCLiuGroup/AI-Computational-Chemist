@@ -31,6 +31,15 @@ Run this before writing the final report manifest. It is a soft gate: it should 
 - [ ] Units on every number; sign convention stated where E_ads/E_bind could be read either way.
 
 ## Data shown on the structure
+- [ ] Every report-ready figure has a figure contract or equivalent manifest section
+  naming its scientific driver, core conclusion, panel map, evidence hierarchy, source
+  data, layout contract, aesthetic contract, and risk notes. Reviewer-comment links are
+  required only for review-response packages; generic research reports use research
+  questions, manuscript claims, benchmark cases, method-validation tasks, or
+  exploratory-analysis IDs.
+- [ ] Every report-ready figure has an archetype route from
+  `references/figure-archetype-atlas.md`: selected archetype, hero panel, support
+  panels, and panels to drop if crowded.
 - [ ] Every charge / oxidation-state / bond claim is **shown on a structure figure** (atoms colored by the quantity + colorbar; decisive atoms labeled), not presented only as a table cell.
 - [ ] Electronic-structure arguments (charge transfer, reducibility, band character) are backed by the **paired figure** (structure + charge, and DOS/PDOS where the argument needs it) — not asserted from a number alone.
 - [ ] Every **adsorption / binding energy reported in a table** (e.g. each H2O or CO adsorption configuration) has an **accompanying structure figure** of that adsorption geometry (ball-and-stick, side + top), so the reader sees the binding site and orientation behind each number — not a bare energy.
@@ -54,6 +63,35 @@ Run this before writing the final report manifest. It is a soft gate: it should 
   work-function plateau, or periodic-boundary geometry is itself the point of the
   figure.
 
+## Figure layout and readability
+
+- [ ] Each report-ready figure has been checked at its final inserted width using
+  `references/figure-layout-qa.md`.
+- [ ] Body, axis, tick, legend, and colorbar text remain readable at final size; text is
+  not shrunk below the figure contract's font-size floor.
+- [ ] Tick labels, axis labels, legends, colorbars, panel labels, and annotations do not
+  overlap each other or cover plotted evidence.
+- [ ] Text has adequate foreground/background contrast: no white text on white or pale
+  backgrounds, no dark text on dark plates, and no annotation color chosen without
+  considering the cell/bar/structure background.
+- [ ] Formula definitions, reference-state notes, method notes, reviewer-comment context,
+  and other long explanatory text boxes are not placed inside data axes. They belong in
+  the caption, a figure-level note band, or a dedicated note panel.
+- [ ] Heatmap, charge-density, contour, and other raster/data-image panels do not have
+  legends placed over the image unless a recorded waiver states the region is empty and
+  the legend has an opaque high-contrast box.
+- [ ] Repeated legends are replaced by direct labels, a shared legend, or a legend-only
+  panel when they crowd data panels.
+- [ ] The figure's aesthetic contract is visible in the result: one hero panel or clear
+  primary axis carries the conclusion, validation/context panels are quieter, and the
+  palette follows semantic roles rather than arbitrary category colors.
+- [ ] Long category labels are shortened, wrapped, angled no more than 45 degrees, moved
+  to a legend/table, or the figure is widened.
+- [ ] For Matplotlib plots, `scripts/aicc_figure_style.py` or an equivalent final-size
+  check has been run when practical. Warnings for overlap, low contrast, sampled raster
+  contrast, long text inside axes, or in-raster legends block a final report until fixed
+  or waived with a visible reason.
+
 ## Completeness & rigor
 - [ ] **The actual system of interest is in the comparison, not only ablation/sub-models.** If the real catalyst/material is a multi-component system (e.g. the full promoter-loaded site), every comparison table reports *that* system's value too — not just the simplified one-variable-at-a-time sub-models. Readers need the real number, not only the trend.
 - [ ] **Derived reference potentials show their derivation.** Any reference chemical potential obtained from an equilibrium (e.g. μ_O from `CO + ½O₂ ⇌ CO₂` or `H₂ + ½O₂ ⇌ H₂O`, μ_H from H₂) is reported with its **defining reaction + formula + the numeric substitution**, not just the final eV value — so a reader can check it.
@@ -74,6 +112,8 @@ Run this before writing the final report manifest. It is a soft gate: it should 
 - [ ] Multi-panel captions identify each panel explicitly, e.g. `(a) orthographic top view, (b) zoomed side view` or `(a) element-colored structure, (b) Bader-charge-colored structure`.
 - [ ] **Defect/vacancy formation energies name the exact site removed or added** (e.g. *which* O was pulled for E_vac(O) — bridging vs in-plane vs sub-surface), not just "E_vac(O)". Inequivalent sites give different energies, so identify the site (mark it on a structure figure) and, where it matters, report the range over symmetry-distinct sites rather than a single unlabeled value.
 - [ ] **The report ends with a calculation-directory table** mapping every Figure/Table to the directory its data came from (Figure 1 → `calc/...`, Table 2 → `calc/...`), so a human can find the raw inputs/outputs to check and archive (see `references/running.md`).
+- [ ] The final package checklist has been run for `.docx` integrity, figure/caption
+  counts, unresolved placeholders, and handoff notes.
 
 ## Integrity (inherits the workflow rules)
 - [ ] `contradicts`/`inconclusive` outcomes are stated with the same prominence as supportive ones; nothing spun.

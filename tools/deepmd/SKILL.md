@@ -5,62 +5,51 @@ description: DeePMD-kit and Deep Potential Molecular Dynamics workflows. Use for
 
 # DeePMD-kit / DPMD
 
-Deep Potential Molecular Dynamics uses a trained DP model to provide energies and forces during MD. The MD workflow is the same statistical sampling problem as AIMD; the force provider changes from DFT to the learned potential.
+## Required inputs
 
-## Where to find what
+- Filtered, converged DFT/ab-initio labels with source-file provenance and one
+  consistent method fingerprint.
+- The production target: composition, phases, defects/interfaces, thermodynamic range,
+  reactive/diffusive events, and required observables.
+- Element order/`type_map`, dataset split policy, training resources, and deployment
+  engine.
 
-| Situation | Go to |
+## Route map
+
+| Need | Load or run |
 |---|---|
-| prepare dpdata datasets, write `input.json`, train/freeze/compress/test, run LAMMPS DPMD | `references/running.md` |
-| scheduler/job script for `dp train`, GPU training, `dp test`, or DPMD deployment | `tools/hpc-submit/SKILL.md`; read the target `~/.cluster-agents.md` before writing the script |
-| decide whether a DP model is usable, read `lcurve.out`/`dp test`, model-deviation thresholds, or read the automatic DPMD handoff verdict | `references/validation.md` |
-| visualize dataset coverage/distribution with short DPA1 descriptors, PCA, or t-SNE | `references/dataset-embedding.md` |
-| run the default one-chain DeepMD workflow: `dp train` -> lcurve plot -> `dp freeze` -> `dp test` -> parity plots -> DFT train/val/test PCA -> QA verdict | `scripts/run_deepmd_chain.py`; see `references/running.md` |
-| produce or debug individual post-training diagnostics | `scripts/plot_deepmd_postprocess.py`, `scripts/deepmd_descriptor_pca.py`, `scripts/check_deepmd_qa.py` |
-| training fails, NaN loss, bad metrics, type-map mismatch, MD instability | `references/errors.md` |
-| DeepMD docs, DP-GEN, DPLibrary, related MLP programs | `references/resources.md` |
-| working examples to copy and adapt | `examples/` |
+| design/convert datasets, configure training, and deploy DPMD | `references/running.md` |
+| decide model readiness, metrics, stability, and model-deviation use | `references/validation.md` |
+| run the chained train-to-QA workflow | `scripts/run_deepmd_chain.py` |
+| generate individual diagnostics or verify the QA package | `scripts/plot_deepmd_postprocess.py`; `scripts/deepmd_descriptor_pca.py`; `scripts/check_deepmd_qa.py` |
+| map dataset coverage with DPA1/PCA/t-SNE | `references/dataset-embedding.md` |
+| diagnose training, data, type-map, or MD failures | `references/errors.md` |
+| submit training/deployment jobs | `tools/hpc-submit/SKILL.md` |
+| interpret MLP and MD results | `knowledge/machine-learning-potentials.md`; `knowledge/molecular-dynamics.md` |
+| consult DeePMD/DP-GEN/DPLibrary resources | `references/resources.md` |
+
+## Workflow
+
+1. Define the production domain, assemble/filter labels according to
+   `references/running.md`, and preserve the method fingerprint and type order.
+2. Convert and split data, configure `input.json`, then use
+   `scripts/run_deepmd_chain.py` for the default train/freeze/test/diagnostic chain.
+3. Apply `references/validation.md` and `scripts/check_deepmd_qa.py`; expand data or
+   revise one cause at a time when a gate fails.
+4. Hand a passing or explicitly waived model to LAMMPS DPMD through `hpc-submit`, then
+   validate short stability runs before production sampling.
 
 ## Hard guardrails
 
-- The training distribution must cover the production task: composition, phase, defects/interfaces, volume/strain, temperature, and relevant reactive/diffusive events.
-- Default initial-dataset strategy: generate more DFT/AIMD labels from multiple
-  physically plausible starting models and multiple temperatures before training the
-  first production DP model. Prefer this direct coverage expansion over default
-  4-model committee active learning unless the user explicitly requests concurrent
-  learning, model-deviation exploration, or the validation risk justifies the cost.
-- Unless there is a documented special reason, collect at least `10000` filtered
-  DFT-labeled frames before the first dataset split and production training. Count
-  converged, chemically sensible frames after filtering, not raw AIMD ionic steps. If a
-  smaller set is used for a smoke test, expensive pilot, strict reproduction, or
-  user-directed quick run, label the result as non-production/pilot until more labels
-  are added.
-- For high-temperature diffusion, transport, or reactive MD work, include training
-  frames at temperatures at least as high as the final DPMD temperature;
-  low-temperature-only AIMD gives a narrow potential-energy surface.
-- One dataset means one DFT method fingerprint: functional, ENCUT/basis, k-point policy, U values, spin policy, convergence thresholds, and pseudopotential family.
-- The `type_map` order is a contract. It must match dpdata output and LAMMPS atom types.
-- Production DPMD requires validation outside the training frames: held-out error,
-  learning-curve review, parity plots, dataset coverage checks, physics checks, and
-  short stability tests. A 4-model committee model-deviation monitor is optional and
-  should be used only when requested or when uncertainty/extrapolation risk is the main
-  objective.
-- Default DeepMD execution is chained, not interactive. After DFT label sources are
-  identified, proceed through conversion/splitting, `dp train`, learning-curve plot,
-  `dp freeze`, held-out `dp test`, parity plots, DFT-all descriptor PCA, and the QA
-  verdict without pausing between phases. Stop only for a failed command, missing
-  required data, an unresolved scientific choice, or a long/expensive DPMD submission
-  that has not already been approved.
-- Dataset PCA/t-SNE maps are coverage diagnostics only. They can reveal missing or duplicated regions, but they do not replace `dp test`, model deviation, or physics validation.
-- Before LAMMPS DPMD handoff or report use, run the fixed chain or create the fixed
-  DeepMD QA package:
-  `deepmd_lcurve_energy_force_lr.png`, `deepmd_dp_test_energy_parity.png`,
-  `deepmd_dp_test_force_parity.png`, `deepmd_dp_test_force_residual_hist.png`,
-  `deepmd_descriptor_pca_dft_all.png`, `postprocess_summary.json`, and
-  `deepmd_descriptor_pca_dft_all/summary.json`. Run `scripts/check_deepmd_qa.py`
-  against the package and do not treat the model as handoff-ready until the automatic
-  verdict passes or a visible waiver/limitation is recorded.
-- The descriptor PCA for the fixed QA package is run over all compatible DFT-labeled
-  `train`, `val`, and `test` frames by default. DPMD trajectory overlays are useful
-  follow-up diagnostics, but they do not replace the DFT-all split coverage map.
-- Scientific observables come from equilibrated production trajectory segments only; use `knowledge/molecular-dynamics.md` for MSD/RDF/VACF/free-energy interpretation and `knowledge/machine-learning-potentials.md` for MLP-wide principles.
+- Cover the intended composition, structures, volume/strain, temperature, and relevant
+  events. Apply the dataset-size and high-temperature coverage policies in
+  `references/running.md`; label smaller sets as pilot/non-production.
+- Do not mix incompatible DFT labels in one dataset. Record functional, basis/ENCUT,
+  k-point, U/spin, convergence, and potential-family choices.
+- Treat `type_map` order as an interface contract across dpdata, the model, and LAMMPS.
+- Validate outside training frames with held-out errors, learning curves, parity and
+  coverage diagnostics, physics checks, and short MD stability tests. Embeddings alone
+  are not validation.
+- Do not release a model to DPMD or reporting until the fixed QA chain passes, or a
+  visible waiver and limitation records every failed gate.
+- Derive scientific observables only from equilibrated production trajectory segments.

@@ -14,7 +14,7 @@ Fix one thing at a time; most "LAMMPS errors" are setup errors surfacing mid-run
 | Immediate temperature explosion at step ~0 | overlapping atoms or timestep in wrong units (`real` fs vs `metal` ps) | check units line vs timestep value first — the classic 1000× error |
 | `Neighbor list overflow` | huge cutoff or dense system vs page settings | `neighbor` skin sanity; `neigh_modify page/one` increase |
 | ReaxFF charges all zero / nonsense species | missing `fix qeq/reaxff`, or ffield element order mismatch | add the qeq fix; pair_coeff element list must match data-file types |
-| MLP run explodes though training metrics were good | simulation left the training distribution | check model deviation (see `mlp` skill); this is a dataset problem, not a LAMMPS problem |
+| MLP run explodes though training metrics were good | simulation left the training distribution | for DeePMD use `tools/deepmd/references/validation.md`; for other architectures use their dedicated skill or `tools/mlp`; this is a dataset problem, not a LAMMPS integrator problem |
 | Thermostat "damping" warnings / T oscillates | damping constant in wrong units (it is *time*, not steps) | damp ≈ 100×dt (thermostat), 1000×dt (barostat), in time units of the unit system |
 
 ## Restart rules

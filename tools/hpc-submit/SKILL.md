@@ -5,69 +5,56 @@ description: Submit, monitor, and recover computational chemistry jobs locally, 
 
 # HPC Submit
 
-Use only after the engine skill's scientific preflight passed. Scheduler state (`COMPLETED`/`FAILED`) describes the process; only the engine's parser decides whether the calculation succeeded.
+Use this scheduler gate only after the producing engine's scientific preflight passes.
 
-This is the scheduler gate for every engine, not a VASP-specific helper. Whenever
-an engine or workflow needs a Slurm/PBS/local batch script (VASP, CP2K,
-Gaussian, LAMMPS, DeePMD, phonopy arrays, GROMACS if present, or post-processing
-jobs), enter this skill before drafting the script and read the target
-`~/.cluster-agents.md`.
+## Required inputs
 
-If the project has `.research/` state and the execution task declares
-`execution_policy.requires_claim: true`, do not submit until that task has an active
-lease from `procedures/research-orchestrator/scripts/claim_task.py`. Record the lease
-ID alongside the job ID, heartbeat while monitoring long work, and run
-`reconcile_leases.py` before any recovery or rerun after disconnects. When `.research/`
-uses `check_pre_submit.py`, register an accepted `cluster-guide-read` artifact in the
-engine/HPC task inputs after reading the target `~/.cluster-agents.md`; this is the
-machine-checkable evidence that the site guide was consulted.
+- Target execution context (already local or an explicitly approved remote), scheduler,
+  site operating guide, and configured transfer route when remote.
+- Validated engine inputs, launch command, resources, wall time, work directory, and
+  expected logs/artifacts.
+- Submission approval and, when `.research/` requires it, an active execution lease.
 
-## Know the cluster first (three-tier discovery)
+## Route map
 
-**Already running on the target cluster?** Then there's nothing to connect to and no file transfer — commands run locally. Skip tier 1 and the rsess session; read `~/.cluster-agents.md` and the MOTD as local files, and submit directly. The tiers below cover the remote case.
-
-Every cluster is different. **Do not connect to any server, guess any hostname/partition/module, or submit anything until you know the target machine.** Discover its facts in three tiers, cheapest first (full rules in `AGENTS.md` "Site environment"):
-
-1. **Local bootstrap — just enough to connect.** The minimum to reach the box and move files: connection command/alias + file-transfer (scp/rsync) pattern. Lives locally (a small file the user points to, your own memory, or taught this session) — never guessed, never in this repo. For a stateful shell that survives disconnects, the `rsess` skill is recommended: open a session once per campaign, then `rsess run` for every remote command.
-2. **On login, read the MOTD/banner.** Partitions, quotas, and policy are often announced there; follow any pointer it gives to an operating guide.
-3. **Read `~/.cluster-agents.md` in the remote home** — the cluster's own operating guide (scheduler/partitions, modules, code launch lines, POTCAR/library paths, job-script templates, quotas, policy). Authored once on the cluster so later sessions and teammates inherit it. **On conflict it wins over any MOTD-pointed guide** — that's the center's generic default; this is the user's tested convention.
-
-If `~/.cluster-agents.md` is absent or incomplete, ask the user and probe (`sinfo`, `module avail`, `scontrol show partition`) for the smallest missing set — scheduler/partitions/account, code launch (module, binary, mpirun vs srun), licensed potential/basis library paths, the modern-Python recipe — then **offer to write `~/.cluster-agents.md`** (template: `references/cluster-guide-template.md`) so it persists. Connection facts go to the local bootstrap; operating facts go to the remote guide. Both are private: never committed, never echoed into reports.
-
-## Where to find what
-
-| Situation | Go to |
+| Need | Load or run |
 |---|---|
-| new cluster / missing environment fact / writing the remote `~/.cluster-agents.md` | `references/cluster-guide-template.md` + ask the user |
-| need a persistent remote shell — stateful commands, survives disconnects, faithful output capture | use the `rsess` skill to open a session; then `rsess run`/`rsess peek` for all remote work |
-| writing a job script (Slurm/PBS), job arrays, command translation, monitoring patterns, remote workspace setup | `references/running.md` |
-| wait for a job to finish when chaining stages (without false positives from a transient `squeue` hiccup) | `scripts/wait_for_job.sh` — confirms a terminal state via `sacct`; exit 0 only on COMPLETED, then still gate on the engine parser |
-| execution-side preflight; what to record at submission | `references/validation.md` |
-| pending forever, OOM-kill, TIMEOUT, node failures, module/MPI problems, corrupted transfers, lost session output | `references/errors.md` |
-| working examples to copy and adapt | `examples/` |
-| not covered locally (Slurm/PBS docs, reason codes) | `references/resources.md` |
+| discover the site, draft Slurm/PBS/local jobs, arrays, monitoring, or remote workspaces | `references/running.md` |
+| create/update the private cluster operating guide | `references/cluster-guide-template.md` |
+| run execution preflight and record submission/recovery evidence | `references/validation.md` |
+| maintain a persistent remote shell | `tools/rsess/SKILL.md` |
+| wait for a terminal Slurm state in a chained workflow | `scripts/wait_for_job.sh` |
+| diagnose queue, resource, MPI/module, transfer, or session failures | `references/errors.md` |
+| claim/reconcile durable execution ownership | `procedures/research-orchestrator/references/ownership-protocol.md`; `procedures/research-orchestrator/references/recovery-protocol.md` |
+| consult scheduler documentation | `references/resources.md` |
+
+## Workflow
+
+1. Determine whether execution is local or remote. Follow the discovery and private
+   guide procedure in `references/running.md`; read the target
+   `~/.cluster-agents.md` before drafting the job.
+2. Confirm the engine preflight and accepted release gates. Claim the task when
+   required, then run the execution preflight in `references/validation.md`.
+3. Obtain approval for an expensive batch, submit through one owner, and immediately
+   record the command, job ID, script, workdir, outputs, and lease ID.
+4. Monitor through scheduler accounting. After a terminal state, run the engine parser;
+   on failure, consult `references/errors.md`, change one cause, and reconcile state
+   before any rerun.
 
 ## Hard guardrails
 
-- **Move files only via the configured transfer route.** Never push file content through a terminal/tmux session — line-wrapping corrupts it silently. If using rsess for commands, scp/rsync works transparently with the same target name.
-- **Open a persistent remote session before any remote work.** The `rsess` skill provides stateful commands (cwd/env/venv persist), survives connection drops, and captures output faithfully through files — immune to terminal-corruption issues. Use `rsess run` for commands, `rsess peek` to verify; never rely on one-shot `ssh host cmd`. If rsess is not available in the environment, use whatever connection method the local bootstrap specifies.
-- **Read the target cluster guide before preparing any job script.** Use the local
-  `~/.cluster-agents.md` when already on the cluster, or the remote user's file
-  after connecting. Apply its custom instructions, scheduler, storage, software,
-  and engine-specific sections before writing headers, module loads, launch
-  commands, scratch paths, GPU requests, or Python/conda/uv setup.
-- **Set up the remote workspace properly**: copy the engine's preflight/parser scripts to the remote workdir and run them there with a modern Python obtained via the remote guide's Python recipe (create an agent env if allowed). Do not degrade scripts to fit an old system interpreter.
-- **Do not submit from structure-generation scripts.** Structure-modeler code that deletes atoms,
-  adds adsorbates/fragments, substitutes atoms, or otherwise mutates geometry must stop
-  before `submit.sh`/scheduler creation. Engine/HPC submission starts only from an
-  engine-runner task after accepted structure gates and `check_pre_submit.py`.
-- **Approval breakpoint** before expensive batch submissions unless this batch was already approved.
-- **Ownership breakpoint** before expensive batch submissions when `.research/` is in
-  use: the execution task must be claimed and its owner directory protected by an active
-  lease.
-- Never resubmit blindly: diagnose → change one thing → resubmit → record what changed.
-- Long jobs go through the scheduler; detached `tmux`/`nohup` only where no scheduler exists (record PID + log path).
-- Record job ID, command, script path, workdir, and lease ID immediately after
-  submission (into `.research/events.jsonl` and `workflow.md` when they exist).
-- No deleting/overwriting outside the job's own working directory; no secrets or licensed file contents in logs; SSH targets must be explicitly approved.
-- Cluster facts learned the hard way (partitions, cores/node, launcher) get recorded in the remote `~/.cluster-agents.md`; connection facts in the local bootstrap. Never in repo files.
+- Never guess a host, partition, account, module, launcher, resource request, or
+  licensed-data path. Confirm it from the approved target and its operating guide.
+- For remote work, use the configured persistent session and file-transfer routes; do
+  not transmit files through a terminal pane or expose secrets in commands/logs.
+- Do not submit before accepted structure/engine gates, expensive-run approval, and any
+  required active lease. Structure-generation code must never submit jobs.
+- Scheduler `COMPLETED` means process completion, not scientific convergence. Only the
+  engine parser can release results.
+- Run long work through the site scheduler when one exists. On a target without a
+  scheduler, use managed tmux/nohup only with the PID, log, workdir, and stop/recovery
+  procedure recorded; never leave an untracked long process on a login shell.
+- Never resubmit blindly. Reconcile leases/jobs/files after disconnects, diagnose the
+  exact failure, change one thing, and record it.
+- Do not delete or overwrite outside the job workdir. Keep site facts in the private
+  cluster guide, not the repository or report.

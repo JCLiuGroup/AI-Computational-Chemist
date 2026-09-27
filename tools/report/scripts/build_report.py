@@ -18,7 +18,7 @@ Manifest schema (JSON):
   "subtitle": "optional line under the title",
   "sections": [
     {
-      "heading": "R2.8 - interfacial Pt valence state",
+      "heading": "R2.C8 - interfacial Pt valence state",
       "level": 1,                       # 1..3
       "paragraphs": ["plain text ...", "..."],
       "tables": [

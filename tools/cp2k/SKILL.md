@@ -43,7 +43,7 @@ Task types: **single-point** (`RUN_TYPE ENERGY`), **optimization** (`GEO_OPT`, `
 | run finished: output summary, convergence checks, provenance | `uv run scripts/parse_cp2k.py`, then `references/validation.md` |
 | SCF failure, warnings, memory, unsupported k-point task, opt/MD issues | `references/errors.md` |
 | official manual, exercises, forum, Sobereva/Multiwfn tools | `references/resources.md` |
-| working examples to copy and adapt | `examples/` |
+| example contribution rules | `examples/README.md` |
 
 ## Workflow
 

@@ -4,7 +4,7 @@
 > is wired to its provenance in `scripts/vacancy.py` / the workflow file. The agent
 > does not finalize tone or rebuttal strategy.
 
-## Response to R2.1
+## Response to R2.C1
 
 > **Reviewer 2.1 (p.4):** "A simple first-principles estimate of the monovacancy
 > formation energy in bulk Pt versus Au would substantiate (or undermine) this
@@ -31,11 +31,11 @@ field-standard DFT settings recorded in the method fingerprint.
 **Manuscript change:** add one sentence + a one-row SI table reporting the computed
 E_v(Pt) > E_v(Au) in support of the stability claim.
 
-## Response to R2.2 (text-only — for the authors)
+## Response to R2.C2 (text-only — for the authors)
 
 Editorial; reduce "superior" usage in the abstract. No computation. Handed to authors.
 
-## Response to R2.3 (needs human decision)
+## Response to R2.C3 (needs human decision)
 
 A support-effect (metal/oxide interface) study is a substantially larger model.
 Options for the authors: (a) add it as a scoped follow-up calculation (cost: large,

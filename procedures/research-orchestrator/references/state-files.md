@@ -12,6 +12,8 @@ research project. It complements, but supersedes, human-readable `workflow.md` s
   tasks/
     T001.yaml
     T002.yaml
+  jobs/
+    J-<uuid>.json
   leases/
     T002.json
   artifacts.jsonl
@@ -26,6 +28,9 @@ research project. It complements, but supersedes, human-readable `workflow.md` s
   reconciled from `.research/`, filesystem state, scheduler state, and parser outputs.
 - `.research/leases/*.json` records execution ownership. A lease is an execution claim,
   not scientific validation and not permission to resubmit after expiry.
+- `.research/jobs/*.json` is the authoritative scheduler-attempt history. Run-directory
+  `.aicc-active-job.json` files are duplicate-submission pointers only; follow
+  `job-contract.md`.
 - If a task file and event log disagree, report the discrepancy and reconcile from
   evidence: files on disk, scheduler accounting, and engine parser results.
 

@@ -1,0 +1,7 @@
+state,kind,g0_eV,m_O,n_H,z,activity,residual_g_eV,supported_g_eV,bulk_g_eV,standard_potential_V,color,source
+clean,surface,0.00,0,0,,,,,,,,synthetic regression fixture
+OH,surface,-0.70,1,1,,,,,,,,synthetic regression fixture
+O,surface,0.30,1,0,,,,,,,,synthetic regression fixture
+2OH,surface,-0.10,2,2,,,,,,,,synthetic regression fixture
+3OH,surface,0.80,3,3,,,,,,,,synthetic regression fixture
+M_dissolved,dissolved,,,,2,1.0,-100.00,-105.00,-5.00,-0.25,,synthetic regression fixture

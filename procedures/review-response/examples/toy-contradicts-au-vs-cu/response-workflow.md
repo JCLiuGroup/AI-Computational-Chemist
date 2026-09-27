@@ -2,13 +2,13 @@
 
 - **manuscript:** Noble-metal advantage: superior sinter-resistance of Au vs Cu (FAKE fixture)
 - **fingerprint:** `method-fingerprint.md`
-- **objective:** answer R1.1 — does Au resist vacancy formation more than Cu?
+- **objective:** answer R1.C1 — does Au resist vacancy formation more than Cu?
 
 ## Reusable assets
 
 _(none reused here — both runs are cheap; in a real campaign shared slabs/gas refs would be listed here with the fingerprint they were built under)_
 
-## R1.1 — status: validated — outcome: **contradicts**
+## R1.C1 — status: validated — outcome: **contradicts**
 
 | stage | status | evidence |
 |---|---|---|

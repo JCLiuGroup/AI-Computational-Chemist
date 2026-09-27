@@ -7,12 +7,13 @@ ESPRESSO, CP2K, …); how to *operate* a specific code lives in `tools/<name>/`.
 
 ## How this differs from a skill
 
-These are **flat reference documents, not skills**: no frontmatter, no `SKILL.md`, not in
-the routing table, not installed by `install.sh`. They are **starting points to draw ideas
-from, not rules** — an agent reads the relevant doc, takes what fits the problem, and adapts
-freely; it never has to pick one or follow it as-is. Discovery is by cross-links from the
-procedure/tool skills (e.g. `tools/vasp/SKILL.md` points the science of surface energy here)
-plus the `AGENTS.md` routing note and this index.
+These are **flat reference documents, not skills**: no frontmatter, no `SKILL.md`, and not
+in the skill routing table. `install.sh` copies them into the installed collection, where
+skills can cross-link to them; it does not register them as independent skills. They are
+**starting points to draw ideas from, not rules** — an agent reads the relevant doc, takes
+what fits the problem, and adapts freely. Discovery is by cross-links from procedure/tool
+skills (e.g. `tools/vasp/SKILL.md` points the science of surface energy here), plus the
+`AGENTS.md` routing note and this index.
 
 ## Conventions
 
@@ -33,6 +34,9 @@ plus the `AGENTS.md` routing note and this index.
 - [electrochemistry.md](electrochemistry.md) — CHE thermodynamics, OER/ORR/HER step diagrams,
   pH and SHE/RHE potential corrections, overpotential definitions, volcano descriptors, and
   constant-potential concepts. VASP/VASPsol execution lives in `tools/vasp/references/electrochemistry.md`.
+- [surface-pourbaix.md](surface-pourbaix.md) — thermodynamic surface-state and adsorbate-coverage
+  maps versus pH and potential, CHE lower envelopes, SHE/RHE conversion, dissolution channels,
+  aqueous activities, water-window overlays, boundary audits, and interpretation limits.
 - [periodic-dft-modeling.md](periodic-dft-modeling.md) — periodic cells, PBC/vacuum, k-points
   versus supercells, convergence tests, energy-comparison discipline, smearing, and reporting.
 - [periodic-electrostatics.md](periodic-electrostatics.md) — boundary conditions, molecules in

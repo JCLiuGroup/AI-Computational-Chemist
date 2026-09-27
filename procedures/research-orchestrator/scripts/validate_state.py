@@ -31,6 +31,9 @@ except ImportError as exc:  # pragma: no cover - reached only outside uv/pep723
     ) from exc
 
 
+YAML_LOADER = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
+
+
 TASK_STATUSES = {
     "proposed",
     "approved",
@@ -44,6 +47,17 @@ TASK_STATUSES = {
 }
 ARTIFACT_STATUSES = {"draft", "validated", "accepted", "rejected", "superseded"}
 LEASE_STATUSES = {"active", "released", "stale", "cancelled", "superseded"}
+JOB_STATES = {
+    "submitting",
+    "submission_unknown",
+    "pending",
+    "running",
+    "completed",
+    "failed",
+    "cancelled",
+    "timeout",
+}
+ACTIVE_JOB_STATES = {"submitting", "submission_unknown", "pending", "running"}
 PROJECT_MODES = {"semi-automatic", "autonomous"}
 SECRET_KEY_RE = re.compile(r"(password|passwd|secret|token|api[_-]?key|private[_-]?key)", re.I)
 ALLOWED_ROLES = {
@@ -171,6 +185,24 @@ class Finding:
     message: str
 
 
+@dataclass
+class LoadedResearchState:
+    """Parsed project state returned alongside validation findings.
+
+    Keeping the parsed records lets read-only consumers such as ``aicc status`` and
+    ``ready_tasks.py`` reuse the validator's authoritative view without reparsing the
+    same task files and JSONL registries.
+    """
+
+    research_dir: Path
+    project_root: Path
+    project: dict[str, Any]
+    tasks: dict[str, dict[str, Any]]
+    artifacts: list[dict[str, Any]]
+    decisions: list[dict[str, Any]]
+    events: list[dict[str, Any]]
+
+
 def rel(path: Path, root: Path) -> str:
     try:
         return path.relative_to(root).as_posix()
@@ -189,7 +221,7 @@ def resolve_research_dir(path: Path) -> tuple[Path, Path]:
 
 def load_yaml(path: Path, findings: list[Finding], root: Path) -> dict[str, Any]:
     try:
-        data = yaml.safe_load(path.read_text(encoding="utf-8"))
+        data = yaml.load(path.read_text(encoding="utf-8"), Loader=YAML_LOADER)
     except Exception as exc:  # noqa: BLE001 - report parser detail
         findings.append(Finding("FAIL", rel(path, root), f"YAML parse failed: {exc}"))
         return {}
@@ -360,7 +392,7 @@ def artifact_gate_name(row: dict[str, Any], project_root: Path) -> str:
     if not path.is_file():
         return ""
     try:
-        obj = yaml.safe_load(path.read_text(encoding="utf-8"))
+        obj = yaml.load(path.read_text(encoding="utf-8"), Loader=YAML_LOADER)
     except Exception:
         return ""
     if not isinstance(obj, dict):
@@ -852,6 +884,155 @@ def validate_leases(
     return active_by_task
 
 
+def validate_jobs(
+    research_dir: Path,
+    tasks: dict[str, dict[str, Any]],
+    project_root: Path,
+    findings: list[Finding],
+) -> None:
+    root = research_dir / "jobs"
+    if not root.exists():
+        return
+    if not root.is_dir():
+        findings.append(Finding("FAIL", rel(root, research_dir), "jobs path must be a directory"))
+        return
+
+    leases: dict[str, dict[str, Any]] = {}
+    leases_dir = research_dir / "leases"
+    if leases_dir.is_dir():
+        for path in sorted(leases_dir.glob("*.json")):
+            lease = load_json_file(path, [], research_dir)
+            lease_id = lease.get("lease_id")
+            if isinstance(lease_id, str) and lease_id:
+                leases[lease_id] = lease
+
+    seen_attempts: set[str] = set()
+    seen_submissions: set[str] = set()
+    active_by_workdir: dict[str, list[str]] = {}
+    jobs_by_id: dict[str, dict[str, Any]] = {}
+    where_by_attempt: dict[str, str] = {}
+    for path in sorted(root.glob("*.json")):
+        where = rel(path, research_dir)
+        job = load_json_file(path, findings, research_dir)
+        if not job:
+            continue
+        require_fields(
+            job,
+            [
+                "schema_version",
+                "attempt_id",
+                "submission_id",
+                "task_id",
+                "lease_id",
+                "owner_id",
+                "scheduler",
+                "scheduler_job_name",
+                "state",
+                "workdir",
+                "script",
+                "created_at",
+                "updated_at",
+            ],
+            where,
+            findings,
+        )
+        if job.get("schema_version") != 1:
+            findings.append(Finding("FAIL", where, "`schema_version` must be 1"))
+        attempt_id = job.get("attempt_id")
+        if not isinstance(attempt_id, str) or not attempt_id:
+            findings.append(Finding("FAIL", where, "`attempt_id` must be a non-empty string"))
+        elif attempt_id in seen_attempts:
+            findings.append(Finding("FAIL", where, f"duplicate attempt_id: {attempt_id}"))
+        else:
+            seen_attempts.add(attempt_id)
+            jobs_by_id[attempt_id] = job
+            where_by_attempt[attempt_id] = where
+        submission_id = job.get("submission_id")
+        if not isinstance(submission_id, str) or not submission_id:
+            findings.append(Finding("FAIL", where, "`submission_id` must be a non-empty string"))
+        elif submission_id in seen_submissions:
+            findings.append(Finding("FAIL", where, f"duplicate submission_id: {submission_id}"))
+        else:
+            seen_submissions.add(submission_id)
+        task_id = job.get("task_id")
+        if task_id not in tasks:
+            findings.append(Finding("FAIL", where, f"`task_id` does not reference a task: {task_id}"))
+        lease_id = job.get("lease_id")
+        lease = leases.get(lease_id) if isinstance(lease_id, str) else None
+        if lease is None:
+            findings.append(Finding("FAIL", where, f"`lease_id` does not reference a lease: {lease_id}"))
+        else:
+            if lease.get("task_id") != task_id:
+                findings.append(Finding("FAIL", where, "job task_id does not match its lease"))
+            if lease.get("owner_id") != job.get("owner_id"):
+                findings.append(Finding("FAIL", where, "job owner_id does not match its lease"))
+            if job.get("state") in ACTIVE_JOB_STATES and lease.get("status") in {"released", "cancelled", "superseded"}:
+                findings.append(Finding("FAIL", where, "active job references a closed lease"))
+        state = job.get("state")
+        if state not in JOB_STATES:
+            findings.append(Finding("FAIL", where, f"`state` must be one of {sorted(JOB_STATES)}"))
+        if job.get("scheduler") != "slurm":
+            findings.append(Finding("FAIL", where, "`scheduler` must be `slurm` in schema version 1"))
+        job_id = job.get("job_id")
+        submission_failed = state == "failed" and isinstance(
+            job.get("submission_failed_at"), str
+        )
+        if (
+            state not in {"submitting", "submission_unknown"}
+            and not submission_failed
+            and not isinstance(job_id, str)
+        ):
+            findings.append(Finding("FAIL", where, "recorded scheduler state requires a string `job_id`"))
+        for field in ["created_at", "updated_at", "submitted_at", "submission_failed_at"]:
+            if field in job and not is_iso_datetime(job[field]):
+                findings.append(Finding("FAIL", where, f"`{field}` must be an ISO 8601 datetime"))
+        workdir = job.get("workdir")
+        if not isinstance(workdir, str) or not is_safe_project_path(workdir, project_root):
+            findings.append(Finding("FAIL", where, f"unsafe project-relative workdir: {workdir}"))
+        else:
+            normalized = normalize_project_path(workdir, project_root)
+            if state in ACTIVE_JOB_STATES:
+                active_by_workdir.setdefault(normalized, []).append(str(attempt_id))
+        script = job.get("script")
+        if not isinstance(script, str) or not is_safe_project_path(script, project_root):
+            findings.append(Finding("FAIL", where, f"unsafe project-relative script: {script}"))
+
+    for workdir, attempts in active_by_workdir.items():
+        if len(attempts) > 1:
+            findings.append(
+                Finding("FAIL", "jobs", f"multiple active attempts for {workdir}: {', '.join(attempts)}")
+            )
+
+    for attempt_id, job in jobs_by_id.items():
+        parent_id = job.get("parent_attempt_id")
+        if parent_id is None:
+            continue
+        parent = jobs_by_id.get(parent_id) if isinstance(parent_id, str) else None
+        where = where_by_attempt[attempt_id]
+        if parent is None:
+            findings.append(Finding("FAIL", where, f"parent_attempt_id does not reference an attempt: {parent_id}"))
+            continue
+        if parent_id == attempt_id:
+            findings.append(Finding("FAIL", where, "attempt cannot be its own parent"))
+        if parent.get("task_id") != job.get("task_id") or parent.get("workdir") != job.get("workdir"):
+            findings.append(Finding("FAIL", where, "parent attempt must belong to the same task and workdir"))
+
+    for workdir, attempts in active_by_workdir.items():
+        pointer_path = project_root / workdir / ".aicc-active-job.json"
+        if not pointer_path.exists():
+            findings.append(Finding("WARN", rel(pointer_path, research_dir), "job workdir is missing its active-attempt pointer; duplicate-submission protection is degraded until `reconcile_jobs.py --attempt <id>` restores it or the attempt is resolved"))
+            continue
+        pointer = load_json_file(pointer_path, findings, research_dir)
+        pointer_id = pointer.get("attempt_id")
+        pointed = jobs_by_id.get(pointer_id) if isinstance(pointer_id, str) else None
+        if pointed is None:
+            findings.append(Finding("FAIL", rel(pointer_path, research_dir), f"pointer references missing attempt: {pointer_id}"))
+        elif pointed.get("workdir") != workdir:
+            findings.append(Finding("FAIL", rel(pointer_path, research_dir), "pointer attempt belongs to a different workdir"))
+        elif pointer_id not in attempts:
+            findings.append(Finding("FAIL", rel(pointer_path, research_dir), "pointer does not reference the active attempt for this workdir"))
+
+
 def validate_project(project: dict[str, Any], where: str, findings: list[Finding]) -> None:
     require_fields(
         project,
@@ -1086,12 +1267,15 @@ def validate_events(rows: list[dict[str, Any]], task_ids: set[str], artifact_ids
         walk_secret_keys(obj, where, findings)
 
 
-def validate(path: Path) -> list[Finding]:
+def load_validated_state(path: Path) -> tuple[LoadedResearchState, list[Finding]]:
+    """Load project state once and return it with authoritative validation findings."""
+
     findings: list[Finding] = []
     research_dir, project_root = resolve_research_dir(path)
 
     if not research_dir.is_dir():
-        return [Finding("FAIL", research_dir.as_posix(), "research state directory does not exist")]
+        state = LoadedResearchState(research_dir, project_root, {}, {}, [], [], [])
+        return state, [Finding("FAIL", research_dir.as_posix(), "research state directory does not exist")]
 
     project_path = research_dir / "project.yaml"
     tasks_dir = research_dir / "tasks"
@@ -1158,10 +1342,27 @@ def validate(path: Path) -> list[Finding]:
     detect_cycle(tasks, where_by_id, findings)
     validate_first_submit_boundary(tasks, artifacts, declared_output_gate_by_id, where_by_id, project_root, findings)
     validate_leases(research_dir, tasks, where_by_id, project_root, findings)
+    validate_jobs(research_dir, tasks, project_root, findings)
 
     validate_decisions(raw_decisions, set(tasks), artifact_ids, research_dir, findings)
     validate_events(raw_events, set(tasks), artifact_ids, research_dir, findings)
 
+    state = LoadedResearchState(
+        research_dir=research_dir,
+        project_root=project_root,
+        project=project,
+        tasks=tasks,
+        artifacts=raw_artifacts,
+        decisions=raw_decisions,
+        events=raw_events,
+    )
+    return state, findings
+
+
+def validate(path: Path) -> list[Finding]:
+    """Validate a project while preserving the original findings-only API."""
+
+    _state, findings = load_validated_state(path)
     return findings
 
 

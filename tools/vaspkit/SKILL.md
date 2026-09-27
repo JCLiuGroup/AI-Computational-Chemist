@@ -28,7 +28,7 @@ Use this skill when VASP data already exist or VASP helper inputs must be genera
 | AIMD post-processing: MSD/diffusion, VACF, VDOS, RDF/trajectory conversion, frame cuts and fit windows | `references/aimd-postprocessing.md`; pair with `tools/vasp/references/aimd.md` |
 | task fails, menu input hangs, output files are empty, plots look shifted | `references/errors.md` |
 | official docs, feature list, citation, VASP links | `references/resources.md` |
-| worked examples to copy and adapt | `examples/` |
+| example contribution rules | `examples/README.md` |
 
 ## Workflow
 

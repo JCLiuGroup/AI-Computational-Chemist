@@ -13,15 +13,17 @@ Covers MLP-wide routing and legacy generic notes. DeePMD-kit/DPMD now lives in `
 |---|---|
 | DeePMD-kit/DPMD dataset prep, `input.json`, `dp train/freeze/test`, model deviation | `tools/deepmd/` |
 | general MLP concepts, dataset design, symmetry/equivariance, program taxonomy | `knowledge/machine-learning-potentials.md` |
-| legacy generic dataset prep, training configs, fine-tuning, deployment, active-learning loop | `references/running.md` |
-| is this model production-ready? RMSE gates, physics checks, model-deviation thresholds | `references/validation.md` |
-| training diverges, NaN loss, type-map mismatches, MD explodes despite good metrics | `references/errors.md` |
-| working examples to copy and adapt | `examples/` |
-| not covered locally (DeePMD/MACE/DP-GEN docs) | `references/resources.md` |
+| generic dataset contracts, provisional MACE notes, deployment, active-learning loop | `references/running.md` |
+| is this model production-ready? held-out errors, physics checks, distribution coverage | `references/validation.md` |
+| generic training failures or MACE fine-tuning problems | `references/errors.md` |
+| example contribution rules | `examples/README.md` |
+| external documentation for programs not covered by a dedicated tool skill | `references/resources.md` |
 
 ## Hard guardrails
 
 - Only converged DFT frames become labels; one dataset = one method fingerprint (no mixed settings).
 - Model quality is quoted from held-out data only — never training-set error.
-- A potential is valid only inside its training distribution: production MD monitors model deviation; out-of-range frames are candidates for retraining, not data.
+- A potential is valid only inside its demonstrated distribution. Use the
+  architecture-appropriate uncertainty or committee check when the risk or workflow
+  requires it; out-of-range frames are retraining candidates, not production evidence.
 - Per-iteration provenance: dataset paths/hash, config, seeds, checkpoint, test metrics.

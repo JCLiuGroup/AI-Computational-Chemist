@@ -1,3 +1,43 @@
+# os
 .DS_Store
+
+# python
 __pycache__/
 *.pyc
+
+# licensed - never commit
+POTCAR*
+*.chk
+
+# bulky calculation binaries
+WAVECAR*
+CHGCAR*
+CHG
+AECCAR*
+PROCAR*
+*.fchk
+*.lammpstrj
+Gau-*
+core.*
+
+# local manual copies (linked, not versioned)
+manuals/
+
+# private site/cluster info — never committed.
+# Cluster knowledge lives outside the repo: the local bootstrap (how to
+# connect) in the operator's home or agent memory, the operating guide on the
+# cluster itself (~/.cluster-agents.md). These patterns are defensive — they
+# catch any such file accidentally written into the repo tree.
+site-config.yaml
+site-config.*.yaml
+/cluster-guides/
+/cluster-guide*.md
+.cluster-agents.md
+cluster-agents*.md
+
+# local test/scratch area - never committed
+test/
+
+# private development and manuscript material
+/dev/
+/.claude/

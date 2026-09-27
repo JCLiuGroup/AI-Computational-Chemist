@@ -96,10 +96,14 @@ PCA by compatible type_map and list the excluded data in the summary. Optional D
 trajectory overlays are useful after production runs, but they do not replace the
 DFT-all coverage map.
 
-Missing diagnostics or a failed QA verdict keep the model at pilot/incomplete status
-unless the user records an explicit waiver. A passing QA package still does not prove
-the model is scientifically valid; it only clears the fixed DeepMD regression and
-coverage diagnostics.
+Missing diagnostics or a failed QA verdict give the model a `pilot/incomplete`
+**maturity verdict**, not a workflow status, unless the user records an explicit
+waiver. In `.research/`, keep the model artifact `draft` while remediation is open or
+mark it `rejected` when abandoned; use legal task states such as `blocked` or `failed`.
+Never persist `pilot` or `incomplete` in a task/artifact `status` field. A passing QA
+package may support artifact status `validated`, but it still does not prove scientific
+validity or acceptance; it only clears the fixed DeepMD regression and coverage
+diagnostics.
 
 ## Model Deviation
 

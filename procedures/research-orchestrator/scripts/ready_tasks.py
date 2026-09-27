@@ -17,15 +17,13 @@ from typing import Any
 from follow_up_utils import format_follow_up_blockers, unresolved_follow_up_proposals
 from validate_state import (
     ARTIFACT_STATUSES,
-    TASK_STATUSES,
     Finding,
+    LoadedResearchState,
     file_input_exists,
     is_safe_project_path,
     load_jsonl,
     load_yaml,
-    rel,
-    resolve_research_dir,
-    validate,
+    load_validated_state,
 )
 
 
@@ -132,7 +130,6 @@ def blocked_reasons(
     project_root: Path,
 ) -> list[str]:
     reasons: list[str] = []
-    task_id = task.get("id", "<unknown>")
     status = task.get("status")
 
     if status == "blocked":
@@ -200,14 +197,15 @@ def blocked_reasons(
     return unique
 
 
-def derive_ready(path: Path) -> tuple[list[TaskState], list[TaskState], list[Finding]]:
-    research_dir, project_root = resolve_research_dir(path)
-    findings = validate(research_dir)
-    failures = [finding for finding in findings if finding.level == "FAIL"]
-    if failures:
-        return [], [], findings
+def derive_ready_from_state(state: LoadedResearchState) -> tuple[list[TaskState], list[TaskState]]:
+    """Derive task readiness from an already parsed, valid state snapshot."""
 
-    tasks, artifacts, decisions = load_state(research_dir)
+    tasks = state.tasks
+    artifacts = {
+        row["artifact_id"]: row
+        for row in state.artifacts
+        if isinstance(row.get("artifact_id"), str)
+    }
     ready: list[TaskState] = []
     blocked: list[TaskState] = []
 
@@ -216,13 +214,23 @@ def derive_ready(path: Path) -> tuple[list[TaskState], list[TaskState], list[Fin
         status = task.get("status", "")
         if status not in CANDIDATE_STATUSES and status != "blocked":
             continue
-        reasons = blocked_reasons(task, tasks, artifacts, decisions, project_root)
-        state = TaskState(task_id, task.get("title", ""), status, reasons)
+        reasons = blocked_reasons(task, tasks, artifacts, state.decisions, state.project_root)
+        task_state = TaskState(task_id, task.get("title", ""), status, reasons)
         if reasons:
-            blocked.append(state)
+            blocked.append(task_state)
         else:
-            ready.append(state)
+            ready.append(task_state)
 
+    return ready, blocked
+
+
+def derive_ready(path: Path) -> tuple[list[TaskState], list[TaskState], list[Finding]]:
+    state, findings = load_validated_state(path)
+    failures = [finding for finding in findings if finding.level == "FAIL"]
+    if failures:
+        return [], [], findings
+
+    ready, blocked = derive_ready_from_state(state)
     return ready, blocked, []
 
 

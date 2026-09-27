@@ -14,9 +14,15 @@
 - `rsess run <session> hostname` returns the expected remote hostname within a few seconds — confirms the shell is alive and on the right machine.
 - `rsess peek <session> 5` shows a clean shell prompt with no error messages from `.bashrc`/`.zshrc` that would interfere with `run` (beware of `set -e`, `exit`-invoking lines, or interactive-only prompts in rc files).
 
-## Before submitting HPC jobs through a session
+## Before long or HPC work through a session
 
 - The session's working directory is set correctly: `rsess run <session> pwd`.
 - Required modules load: `rsess run <session> 'module load <engine> && which <binary>'`.
-- Scheduler commands work: `rsess run <session> 'squeue -u $USER'` (or `qstat` equivalent).
+- When the target has a scheduler, its command works:
+  `rsess run <session> 'squeue -u $USER'` (or `qstat` equivalent).
+- When the target has no scheduler, confirm that fact from its guide/probe and follow
+  `tools/hpc-submit/references/running.md` “Scheduler-free long runs”: use a
+  background process with recorded PID, command, workdir, log, and recovery procedure.
+  Use `send` to start it and `peek`/`run` to verify that the shell returned and the
+  process/log are alive.
 - The file-transfer route (scp/rsync, from the local bootstrap) works independently — rsess does not handle file transfer.

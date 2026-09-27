@@ -67,3 +67,8 @@ Recommended:
 
 Only `active` leases block claims. Stale leases block blind resubmission until a recovery
 decision explains what happened.
+
+Job IDs are a lease-level index, not the authoritative scheduler history. Full attempt
+records live under `.research/jobs/` and follow `job-contract.md`. A lease cannot be
+released while one of its attempts is `submitting`, `submission_unknown`, `pending`, or
+`running`.

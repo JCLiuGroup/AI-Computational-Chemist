@@ -6,6 +6,7 @@ import json
 import os
 import shutil
 import socket
+import uuid
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -32,7 +33,8 @@ def now_local() -> datetime:
 
 def parse_time(token: str | None) -> datetime:
     if token:
-        return datetime.fromisoformat(token.replace("Z", "+00:00"))
+        parsed = datetime.fromisoformat(token.replace("Z", "+00:00"))
+        return parsed.astimezone() if parsed.tzinfo is None else parsed
     return now_local()
 
 
@@ -59,7 +61,9 @@ def task_path(research_dir: Path, task_id: str) -> Path:
 
 def write_task(research_dir: Path, task: dict[str, Any]) -> None:
     path = task_path(research_dir, task["id"])
-    path.write_text(yaml.safe_dump(task, sort_keys=False, allow_unicode=False), encoding="utf-8")
+    write_text_atomic(
+        path, yaml.safe_dump(task, sort_keys=False, allow_unicode=False)
+    )
 
 
 def load_current_lease(research_dir: Path, task_id: str) -> dict[str, Any] | None:
@@ -73,11 +77,18 @@ def lease_path(research_dir: Path, task_id: str) -> Path:
     return research_dir / "leases" / f"{task_id}.json"
 
 
-def write_json_atomic(path: Path, obj: dict[str, Any]) -> None:
+def write_text_atomic(path: Path, text: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(path.suffix + ".tmp")
-    tmp.write_text(json.dumps(obj, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    tmp.replace(path)
+    tmp = path.with_name(f".{path.name}.{os.getpid()}.{uuid.uuid4().hex}.tmp")
+    try:
+        tmp.write_text(text, encoding="utf-8")
+        tmp.replace(path)
+    finally:
+        tmp.unlink(missing_ok=True)
+
+
+def write_json_atomic(path: Path, obj: dict[str, Any]) -> None:
+    write_text_atomic(path, json.dumps(obj, indent=2, sort_keys=True) + "\n")
 
 
 def archive_released_current_lease(research_dir: Path, task_id: str) -> None:

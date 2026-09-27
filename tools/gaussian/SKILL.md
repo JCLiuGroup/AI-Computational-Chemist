@@ -30,7 +30,7 @@ Job types: SP, Opt, Freq, Opt+Freq, TS search, IRC, scans, solvent models, count
 | Multiwfn wavefunction analysis: charges, spin density, MOs/NTOs, ESP/ELF/NCI/IRI, spectra | `tools/multiwfn/SKILL.md`; interpretation: `knowledge/electronic-structure.md`, `knowledge/scientific-visualization.md` |
 | job error-terminated (link number) or generic opt won't converge | `references/errors.md`; for exact log parsing use `uv run scripts/parse_gaussian.py` |
 | run finished — termination, imaginary modes, S², energy discipline | `uv run scripts/parse_gaussian.py`, then `references/validation.md` |
-| working examples to copy and adapt | `examples/` |
+| example contribution rules | `examples/README.md` |
 | not covered locally (keyword docs, basis sets, community error guides) | `references/resources.md` |
 
 ## Workflow

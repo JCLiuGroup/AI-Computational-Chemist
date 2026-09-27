@@ -22,12 +22,15 @@ Workflow shape for every MD task: validate setup → minimize → equilibrate (v
 | scheduler/job script, partition/account, module/binary/launcher | `tools/hpc-submit/SKILL.md`; read the target `~/.cluster-agents.md` before writing the script |
 | crashed, ERROR lines, lost atoms, unstable dynamics | `references/errors.md` |
 | run finished — equilibration evidence, drift bars, what may be computed | `uv run scripts/parse_lammps.py`, then `references/validation.md` |
-| working examples to copy and adapt | `examples/` |
+| validate the driving MLP or diagnose extrapolation | DeePMD/DPMD: `tools/deepmd/SKILL.md`; other architectures: `tools/mlp/SKILL.md` or their dedicated skill |
+| example contribution rules | `examples/README.md` |
 | not covered locally (manual, forums, potential repositories) | `references/resources.md` |
 
 ## Hard guardrails
 
 - No production observables from a trajectory whose equilibration was not verified.
 - Zero lost atoms — any loss invalidates the trajectory.
-- An MLP driving MD must be validated for the composition/T-range (`mlp` skill, model deviation).
+- An MLP driving MD must be validated for the declared composition and state range.
+  Route DeePMD model deviation and QA to `deepmd`; use the matching dedicated or
+  umbrella MLP skill for other architectures.
 - Do not mix unit systems between data file, parameters, and script.

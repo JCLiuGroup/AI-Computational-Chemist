@@ -1,0 +1,29 @@
+name: review-response
+version: 1.2.0
+description: >
+  Declarative routing map for AICC peer-review computational responses. SKILL.md
+  remains the entry point; this manifest helps agents load only the references
+  needed for intake, triage, computation planning, or response-package drafting.
+
+always_load: []
+
+axes:
+  phase:
+    detect: |
+      Choose the current workflow phase. For new reviewer files start at intake.
+      For report drafting use package. For classification or planning use triage.
+    values:
+      intake: []
+      triage:
+        - references/comment-taxonomy.md
+        - references/response-templates.md
+      package:
+        - references/response-package.md
+      qa:
+        - references/comment-taxonomy.md
+        - references/response-package.md
+    default: intake
+    multi: false
+
+references:
+  on_demand: []

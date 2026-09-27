@@ -1,110 +1,89 @@
-# Review-Response Schemas and Drafting Templates
+# Review-Response State Templates
 
-> Load this when: creating or updating any review-response state file (fingerprint, triage, master workflow) or drafting the response package — these are the schemas and the letter/SI/changelog templates.
+> Load this when: creating the method fingerprint, comment triage, or the optional
+> human-readable review scoreboard. For letter, SI, changelog, and
+> `AUTHOR_INPUT_NEEDED` drafting, load `response-package.md`.
 
-> For new multi-stage or handoff-heavy projects, structured state lives in
-> `.research/` via `procedures/research-orchestrator/`. The Markdown files below are
-> human-readable summaries and package templates. (A worked instance of every file
-> below: `examples/toy-vacancy-pt-vs-au/`.)
+Structured state belongs in `.research/` through `research-orchestrator`; the Markdown
+files below are evidence summaries, not a second source of truth.
 
 ## `method-fingerprint.md`
 
 ```markdown
 # Method fingerprint
+- origin: manuscript-derived | source-paper-derived | related-literature-derived | designed | mixed
+- reproduction_mode: reproduction | exploration
+- source_evidence: <sections, input archive, or evidence-map artifact IDs>
 
-- origin: manuscript    # extracted from a computational manuscript
-                        # (or `designed` = authored for an experimental manuscript, user-approved)
-- source: section 2.3 + original INCAR files (archive)   # provenance per field
+## Experiment correspondence
+| choice | evidence | assumption/limitation |
+|---|---|---|
 
-## Experiment correspondence  (designed mode — each choice traces to a fact or is a labeled assumption)
-- phase: anatase TiO2, XRD Fig. 2 -> ICSD #9852
-- surface: (101) facet, dominant in TEM (Fig. 3); termination = assumption (stoichiometric)
-- conditions: pH 7 aqueous -> implicit solvent; T effect neglected (stated limit)
-- method precedent: settings adopted from refs 12, 31 (reviewer-cited) via literature-to-calculation
+## Verified settings
+| setting | value | provenance |
+|---|---|---|
 
-## Settings (the binding contract — every calc uses these comparable knobs)
-- code: VASP 6.4.2
-- functional: PBE ; dispersion: D3(BJ)
-- +U: Fe_d = 5.3   # unknown -> ask, never default
-- pseudopotentials: PAW_PBE (Fe_pv, O)   # TITEL lines, not file contents
-- ENCUT: 520 eV
-- k-policy: KSPACING 0.25 (bulk), Gamma-centered, 1 kpt along slab normal
-- convergence: EDIFF 1e-6 eV, EDIFFG -0.02 eV/A
-- cell conventions: 4-layer p(2x2) slab, bottom 2 fixed, 15 A vacuum
-- corrections: ZPE no, solvation no, dipole yes
-- reference states: E(O) = 1/2 E(O2, gas, triplet, 15 A box)
+## Assumed settings
+| setting | chosen value | rationale | approval |
+|---|---|---|---|
 
-## Unknown / unresolved
-- (empty) — anything listed here blocks the comments that depend on it
+## Comparison contract
+- settings that must match: <functional, cutoff/basis, k-density, U, dispersion, corrections>
+- energy/free-energy convention: <E, E+ZPE, H, G, CHE, ...>
+
+## Unresolved
+- <item and dependent comment IDs, or none>
 ```
 
-(Why the settings are a binding contract, and why a deviation is surfaced rather than
-blocked, is stated once in SKILL.md Phase 1 — this file is just the schema.)
+Use the origin and reproduction semantics from
+`procedures/literature-to-calculation/references/research-artifacts.md`. A method
+deviation is recorded and disclosed; a comment explicitly challenging the method may
+require the deviation as the comparison itself.
 
-## `triage.md`  (one section per comment)
+## `triage.md`
+
+Create one section per atomic comment using the fields and enums in
+`comment-taxonomy.md`:
 
 ```markdown
-## R1.2 — compute-new   # compute-new | reanalyze | method-challenge | text-only | needs-human-decision
-> "The authors should verify the adsorption energy is converged with slab thickness."
-- target: E_ads(CO) vs 4/5/6-layer slabs
-- satisfaction criterion: dE_ads < 0.05 eV between successive thicknesses   # make it falsifiable
-- route: structure-prep -> vasp -> hpc-submit
-- method delta: none    # any deviation from the fingerprint, with justification
-- reuses: relaxed-bulk (from R1.1)
-- cost: ~6 relaxations, medium
-- approved: no          # flipped only by the user, at Approval #1
+## R1.C2
+> "<verbatim reviewer comment>"
+- route: compute-new | reanalyze | method-challenge | add-figure | text-only | needs-human-decision
+- severity: minor | major | blocking | unclear
+- category: <comment-taxonomy category>
+- action: <comment-taxonomy action>
+- readiness: ready-to-plan | needs-source-data | needs-author-input | blocked | out-of-scope
+- directness: exact-question | adjacent-question-risk | insufficiently-specified
+- target_quantity: <observable>
+- satisfaction_criterion: <falsifiable threshold, with units where possible>
+- minimum_evidence: [...]
+- scale_bar: <composition/cell/time/seeds scope or not-applicable>
+- route_skills: [...]
+- method_delta: <none or disclosed difference>
+- reuses: [...]
+- cost: <tier or estimate>
+- approved: no
 ```
 
-## `response-workflow.md`  (human-readable scoreboard)
+Run the taxonomy's directness gate before approval. An adjacent proxy remains visible
+as a limitation or `PARTIAL`; it is not silently promoted to a direct answer.
+
+## `response-workflow.md`
+
+This optional scoreboard is derived from `.research/`:
 
 ```markdown
 # Response workflow
-- manuscript: doi-or-path
-- fingerprint: method-fingerprint.md
+- manuscript: <path or identifier>
+- fingerprint: <artifact ID or path>
 
-## Reusable assets   # never recompute what exists on-contract
-| asset | where | fingerprint |
-| relaxed bulk | runs/bulk/ | designed-v1 |
-
-## R1.2 — status: running — outcome: (pending)
-# status: proposed | approved | running | completed | validated | accepted | blocked
-# outcome: addresses | contradicts | inconclusive   (the field that drives control flow — contradicts halts to the authors)
-# (structured approval lives in `.research/decisions.jsonl`; don't duplicate it here)
-- per-comment run state: runs/R1.2/workflow.md
-| stage | status | evidence |
-| ... | ... | ... |
+| comment | status | outcome | evidence | next action |
+|---|---|---|---|---|
+| R1.C2 | running | pending | <task/artifact IDs> | <next step> |
 ```
 
-**`contradicts` is a terminal state for automation** — the agent stops and surfaces it
-to the authors with the evidence and options; only the user moves it forward. This is a
-*decision* routed to humans, not a script blocking the agent.
-
-## Response paragraph template
-
-> **Comment (R1.2):** "<verbatim quote>"
->
-> **Response:** We thank the reviewer for this suggestion. We have <what was done: systems, quantity> using the same computational settings as in the original manuscript (<one-line fingerprint: code, functional, cutoff, k-mesh>; full details in SI Section SX). <Result sentence with value ± criterion and units.> <Consequence: "These results confirm…" / "Accordingly, we have revised…" with the manuscript location of the change.>
-
-Conventions:
-
-- One response block per comment, in the reviewers' order; never merge comments silently.
-- Every number: units + where it now lives in the manuscript/SI.
-- If methods deviated from the manuscript: state the deviation and why, in the response text.
-- Pushback, when the calculation shows the concern is unfounded, is factual and respectful: state the result, the criterion it meets, and leave the conclusion to the data. Quote no adjectives.
-- Limitations are stated, not hidden: "This estimate neglects <X>; we expect the qualitative conclusion to hold because <evidence>." Only with actual evidence.
-
-## SI addition template
-
-```text
-SI Section SX: <title tied to the comment>
-Table SX: <quantity> computed at <fingerprint summary>. <Units in header.>
-  columns: system | value (unit) | convergence criterion met
-Caption ends with: "Settings identical to the main text unless noted."
-```
-
-## Revision changelog entry
-
-```text
-[R1.2] Main text p.N / SI SX: added slab-thickness convergence test
-       (new Table SX); E_ads value in Table 2 unchanged (within 0.03 eV).
-```
+Use orchestrator task statuses. The four internal claim outcomes are `addresses`,
+`contradicts`, `inconclusive`, and `needs-follow-up`. In semi-automatic mode,
+`contradicts` pauses for author review; in explicitly requested autonomous mode it is
+recorded prominently and carried into the draft. `needs-follow-up` is not reportable
+until resolved, waived, or converted to an accepted limitation.

@@ -1,6 +1,7 @@
 # Method fingerprint
 
 - **origin:** designed — experimental manuscript, nothing to extract (mode B)
+- **reproduction_mode:** exploration
 - **note:** toy ASE-EMT fixture (same rationale as the sibling example). In a real
   response this would hold the field-convention DFT settings.
 

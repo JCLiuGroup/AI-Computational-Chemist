@@ -1,6 +1,7 @@
 # Running Jobs: Scheduler Templates and Command Reference
 
-> Load this when: writing a job script (Slurm/PBS), translating scheduler commands, or setting up job arrays and monitoring.
+> Load this when: writing a job script, translating scheduler commands, monitoring
+> execution, or managing a long run on a target that has no scheduler.
 
 Adapt partition/queue names, module names, and MPI launchers to the actual cluster — these vary everywhere and must be recorded in that cluster's `~/.cluster-agents.md` once learned.
 
@@ -32,12 +33,19 @@ the target `~/.cluster-agents.md` in the current execution context:
 #SBATCH --output=%x-%j.out
 #SBATCH --error=%x-%j.err
 
+[[ "${1:-}" != "--dry-run" ]] || { echo "Use: sbatch --test-only $0"; exit 0; }
+[[ -n "${SLURM_JOB_ID:-}" ]] || { echo "ERROR: use: sbatch $0" >&2; exit 2; }
+
 module purge
 module load <engine-module>          # from ~/.cluster-agents.md
 
 cd "$SLURM_SUBMIT_DIR"
 srun <engine-binary>                 # or mpirun -np $SLURM_NTASKS <engine-binary>
 ```
+
+Keep these two guards in generated Slurm scripts: `./job.sh --dry-run` remains
+harmless, direct execution without an allocation is rejected, and the scheduler's
+real preflight remains `sbatch --test-only job.sh`.
 
 Engine-specific knowledge — binary variants, input parallelization tags, shared-memory vs MPI models, scratch handling — lives in the engine skill's `running.md` (`vasp`, `gromacs`, `lammps`, `gaussian`, ...); this file owns only the scheduler mechanics.
 
@@ -96,6 +104,42 @@ mpirun vasp_std
 | history/exit code | `sacct -j ID --format=JobID,State,Elapsed,ExitCode,MaxRSS` | `tracejob ID` |
 | cancel | `scancel ID` | `qdel ID` |
 | hold/release | `scontrol hold/release ID` | `qhold/qrls ID` |
+
+## Scheduler-free long runs
+
+Use this branch only after the target guide or a direct probe confirms that no
+scheduler is available. A scheduler, service manager, or site-provided batch mechanism
+always takes precedence over ad hoc background execution.
+
+Before launch, record the owner/lease (when `.research/` is active), exact workdir,
+validated launch command and environment, start time, expected outputs/checkpoints,
+stdout/stderr log paths, and the intended stop/recovery procedure. Then:
+
+1. Open a persistent `rsess`/tmux session for a remote target, or use a local persistent
+   session on the target.
+2. Start the validated command in the recorded workdir with `nohup ... >run.log 2>&1 &`
+   (or the site's approved equivalent), capture `$!` immediately in `run.pid`, and
+   verify that PID is alive and the log has started.
+3. On reconnect, verify the recorded PID **and** its command/workdir before acting; a
+   reused PID or missing process is not permission to launch another copy.
+4. If the process is live, continue monitoring the log and checkpoints. If it exited,
+   inspect the log and run the engine parser before deciding whether recovery is
+   needed. If state is ambiguous, stop and reconcile rather than relaunch.
+
+When `.research/` is active, `.research/jobs/` remains reserved for the scheduler
+attempt contract. Represent a scheduler-free process with the claimed execution task
+plus a project-local process record registered as a `job-record` artifact: store the
+PID as its local `job_id`, and list the command, workdir, log, start time, lease, and
+checkpoints as provenance. While live it remains `draft` and the task remains
+`running`. After reconciliation, a clean process exit with expected files maps to task
+`completed` plus a `validated` process record; an explicit process failure maps to task
+`failed` while retaining a `validated` failure record; ambiguous identity maps to task
+`blocked` plus a `draft` record. Append the launch and reconciliation events.
+
+`nohup` provides neither resource allocation nor scientific validation. Do not use
+this path to run heavy work on a shared login node, and never leave an untracked
+process. Stopping a run requires confirming the recorded PID/command/workdir and
+recording the termination.
 
 ## Monitoring patterns
 

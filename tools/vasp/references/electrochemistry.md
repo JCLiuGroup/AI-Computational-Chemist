@@ -1,6 +1,6 @@
 # Running VASP Electrochemistry: CHE Inputs, VASPsol, VASPsol++
 
-> Load this when: using VASP outputs to assemble CHE step diagrams, preparing VASP calculations for OER/ORR/HER intermediates, or setting up VASPsol/VASPsol++ implicit-solvent and constant-potential calculations. The model equations and interpretation live in `knowledge/electrochemistry.md`.
+> Load this when: using VASP outputs to assemble CHE step diagrams or surface Pourbaix diagrams, preparing VASP calculations for electrochemical intermediates and dissolution states, or setting up VASPsol/VASPsol++ implicit-solvent and constant-potential calculations. The model equations and interpretation live in `knowledge/electrochemistry.md` and `knowledge/surface-pourbaix.md`.
 
 ## Use the knowledge layer first
 
@@ -40,6 +40,50 @@ Gas/liquid references should be computed or imported with the same DFT conventio
 In the tables below, `DeltaG correction` is the free-energy correction added to the VASP electronic energy. For isolated molecules such as H2, H2O, O2, CO, or CO2, first run a molecular frequency calculation, then use VASPKIT task 502 to obtain temperature- and pressure-dependent thermodynamic corrections. For surface adsorbates such as `*OH`, `*O`, `*OOH`, or `*H`, run a slab frequency calculation with the slab atoms fixed and only the adsorbate/reacting atoms mobile, then use VASPKIT task 501 for the adsorbate vibrational free-energy correction. See `knowledge/thermochemistry-and-free-energy.md` for the thermodynamic bookkeeping and `tools/vaspkit/references/thermochemistry.md` for the VASPKIT 501/502 workflow.
 
 Do not apply gas-phase translational/rotational entropy to a bound adsorbate. Treat adsorbate translations/rotations as frustrated vibrations unless a deliberately different model is documented.
+
+## VASP calculation set for a surface Pourbaix diagram
+
+Read `knowledge/surface-pourbaix.md` and balance every candidate state before launching calculations. A minimal calculation set normally contains:
+
+```text
+clean slab                    common surface reference
+each adsorbate/coverage       several plausible sites and arrangements
+each reconstructed surface   if reconstruction is chemically credible
+each residual slab            after removing a dissolving surface atom
+elemental bulk metal          converged energy per atom
+H2 and H2O references         one documented thermochemical convention
+frequency calculations        adsorbate/local modes used in corrections
+```
+
+Use the same surface cell and normalize all reported intercepts to the same cell, face, or number of active sites. Keep the functional, PAW datasets, ENCUT, k-point density, spin/U policy, dispersion, solvation, dipole treatment, fixed layers, and convergence thresholds consistent across every term in an energy expression. A residual slab after dissolution must be relaxed as its own state; subtracting an atomic energy from the intact slab is not a vacancy calculation.
+
+For each nominal coverage, optimize multiple arrangements when the surface permits them. Preserve the VASP directory and a ledger containing:
+
+- state name, composition relative to the clean slab, adsorption site, and coverage;
+- final electronic energy and convergence evidence;
+- ZPE, thermal, entropy, solvation, and standard-state corrections as separate fields;
+- final standard intercept `g0_eV` on the declared normalization basis;
+- source and conditions for each aqueous-ion standard reduction potential and activity.
+
+For bare dissolution `M^(z+) + z e- -> M(bulk)`, form the ion reference with
+
+```text
+G_ion^0 = G_bulk_per_atom + z * U0
+L0      = G_residual_slab + G_ion^0 - G_supported_slab
+```
+
+when energies are in eV and `U0` is in V versus SHE. Do not change the plus sign based on whether the numerical value of `U0` is positive or negative. More complicated hydrolysis or complexation reactions require explicitly balanced reservoirs and are outside the bare-ion shortcut.
+
+Assemble the corrected intercepts in CSV and run the deterministic helper:
+
+```bash
+uv run tools/vasp/scripts/surface_pourbaix.py states.csv \
+  --reference SHE --ph-range 0 14 --potential-range -2.5 2.0 \
+  --water-window --audit 0,0 --audit 7,-0.5 \
+  --output-prefix pourbaix
+```
+
+The script writes an SVG, a pointwise phase-grid CSV, analytic equations for the boundaries observed on the grid, inactive-state warnings, and selected-point energy audits. For a dissolved row, either provide a preassembled `g0_eV=L0`, or leave it blank and provide `residual_g_eV`, `supported_g_eV`, `bulk_g_eV`, `standard_potential_V`, and `z`; the latter route makes the ion-reference sign auditable. The helper covers CHE `*O_mH_n` states and bare-ion dissolution. It does not balance reactions, generate missing surface configurations, or perform full aqueous speciation.
 
 ## `oer.xlsx`-style assembly
 

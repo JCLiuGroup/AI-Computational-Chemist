@@ -1,41 +1,44 @@
-# Running MLP Workflows: Datasets, Training, Deployment, Active Learning
+# Running Cross-Program MLP Workflows
 
-> Load this when: preparing training data, training/fine-tuning DeePMD or MACE, deploying a model for inference, or setting up an active-learning loop.
+> Load this when: defining a generic MLP dataset/training contract, using the
+> provisional MACE notes, or planning deployment and active learning. For any DeePMD
+> operation, use `tools/deepmd/SKILL.md` and its references instead.
 
-## Dataset preparation
+## Dataset contract
 
-- Convert DFT outputs with dpdata: `dpdata.LabeledSystem('OUTCAR', fmt='vasp/outcar').to('deepmd/npy', 'data/sysX')` — one system per composition/cell. ASE-readable formats convert via `ase` → `dpdata`, or `extxyz` for MACE.
-- **Only converged DFT frames are labels.** Filter out unconverged SCF steps before conversion; a few bad labels visibly poison force training.
-- All labels in one dataset must share functional, ENCUT/basis, k-policy, and U values. Mixing settings is a hard error, not noise.
-- Hold out a test split (5–10 %, sampled across systems, never only the tail of a trajectory) before any training.
+- Only technically converged, provenance-linked electronic-structure frames become
+  labels.
+- One dataset uses one method fingerprint. Do not mix functionals, cutoff/basis,
+  k-point policy, U, or incompatible reference-energy conventions as if they were
+  statistical noise.
+- Split train/validation/test data before fitting. Sample all relevant compositions,
+  structures, and state points; do not use only the tail of one trajectory as the test
+  set.
+- Record dataset paths or hashes, split method, configuration, random seeds,
+  checkpoint identity, and held-out metrics.
 
-## DeePMD training
+## Provisional MACE notes
 
-`input.json` essentials: `type_map` (order is the contract with LAMMPS data files), descriptor `se_e2_a` (`rcut` ~6 Å, `sel` auto); the default loss-prefactor schedule (energy ramps up, force ramps down) is sensible; `numb_steps` 4e5–1e6.
+- Train with `mace_run_train --config config.yml`; obtain architecture and cutoff
+  choices from the current MACE documentation and record them.
+- For a foundation-model fine-tune, record the exact checkpoint and license. Monitor
+  held-out behavior for overfitting or catastrophic forgetting.
+- Keep isolated-atom/reference-energy conventions consistent with the labeling
+  calculations.
+- Export for LAMMPS only after the held-out and physics gates in `validation.md` pass.
 
-```bash
-dp train input.json
-dp freeze -o graph.pb          # optionally: dp compress -i graph.pb
-dp test -m graph.pb -s data/test -n 1000
-```
+Detailed commands for another MLP family belong in its own tool skill rather than in
+this umbrella reference.
 
-## MACE training / fine-tuning
+## Deployment and active learning
 
-- `mace_run_train --config config.yml`, `r_max` 5–6 Å.
-- Fine-tuning a foundation model (`--foundation_model mace-mp-0` tier) usually beats from-scratch for small datasets; keep epochs modest and watch validation — it overfits fast.
-- E0s: prefer isolated-atom reference energies computed with *your* DFT settings over `average`.
-- Convert for LAMMPS: `mace_create_lammps_model model.model`.
+Use `tools/lammps/references/running.md` for LAMMPS mechanics. Before production,
+validate the model on the target composition, temperature/pressure range, defects, and
+relevant reactions or barriers.
 
-## Deployment
-
-LAMMPS pair styles and the type-map contract: see `lammps/references/running.md`. For reliability monitoring during MD (model deviation), see validation.md here.
-
-## Active learning loop (DP-GEN style)
-
-1. Train N models on current data (different seeds only).
-2. Run exploration MD across the target T/P/composition grid.
-3. Select candidate frames by the model-deviation window (thresholds in validation.md).
-4. Label candidates with DFT — same settings as the original dataset (preflight via `vasp`).
-5. Retrain; repeat until the candidate fraction is ≪ 1 % across the exploration grid.
-
-Per-iteration provenance: dataset hash/paths, input.json/config, seeds, checkpoint, test metrics. A checkpoint without its dataset and config is unreproducible.
+A generic active-learning cycle is: train independent models or an
+architecture-appropriate uncertainty estimator; explore the declared state space;
+select uncertain frames; label them with the same electronic-structure fingerprint;
+retrain; then re-evaluate held-out and physics gates. Program-specific thresholds and
+commands come from the dedicated tool skill. A model checkpoint without its dataset,
+configuration, and provenance is not reproducible.

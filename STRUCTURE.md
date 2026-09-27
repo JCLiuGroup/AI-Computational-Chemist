@@ -18,7 +18,7 @@ knowledge/    tool-agnostic science + practice (flat reference library; NOT skil
 
 The test for tool-vs-knowledge: **"would this still be true if you switched codes?"** Yes → `knowledge/`; no → `tools/<code>/`.
 
-`procedures/` and `tools/` hold **skills** (frontmatter + `SKILL.md`, routable, installed). `knowledge/` is a **flat reference library** — no `SKILL.md`, not in the routing table, not installed; the skills cross-link into it, and agents read it for ideas and adapt freely (never bound to follow it). Do not add more categories or deeper nesting; deep taxonomy with routing layers defeats description-based routing. Skill names stay globally unique regardless of folder.
+`procedures/` and `tools/` hold **skills** (frontmatter + `SKILL.md`, routable, installed). `knowledge/` is a **flat reference library** — no `SKILL.md`, not in the routing table, and never exposed as a skill; the collection copy includes it because skills cross-link into it, and agents read it for ideas and adapt freely (never bound to follow it). The top-level `aicc/` directory is runtime infrastructure for the collection CLI, not a fourth content or routing category. Do not add more content categories or deeper nesting; deep taxonomy with routing layers defeats description-based routing. Skill names stay globally unique regardless of folder.
 
 Procedure skills are a SKILL.md plus their own `references/` as needed. Every tool skill follows the canonical layout below.
 
@@ -29,46 +29,13 @@ Procedure skills are a SKILL.md plus their own `references/` as needed. Every to
 ```text
 procedures/research-orchestrator/
   SKILL.md
-  references/
-    state-files.md          # .research file contracts
-    task-protocol.md        # task DAG schema and status transitions
-    artifact-contract.md    # evidence, claims, validation, acceptance
-    model-structure-review.md # slab/facet/adsorbate literature and geometry review gate
-    ready-rules.md          # ready/blocked logic
-    roles.md                # planner, executor, critic, reporter responsibilities
-    critic-contract.md      # review and contradiction handling
-    gate-contract.md        # machine-readable plan/structure/result/report gate verdicts
-    handoff-contracts.md    # what must be passed between agents/sessions
-    subagent-artifacts.md   # durable subagent findings under work/agents/
-    evidence-packets.md     # compact evidence bundles for claims
-    ownership-protocol.md   # single-owner execution rules
-    lease-contract.md       # lease/heartbeat file format
-    recovery-protocol.md    # stale lease and interrupted work recovery
-    event-log.md            # append-only workflow event conventions
-  scripts/
-    init_project.py
-    validate_state.py
-    validate_gate.py
-    ready_tasks.py
-    claim_task.py
-    heartbeat_task.py
-    release_task.py
-    reconcile_leases.py
-    run_required_checks.py
-    check_structure_generator_boundary.py
-    check_pre_submit.py
-    check_pre_accept_claim.py
-    check_pre_report.py
-    classify_claim.py
-    accept_artifact.py
-    scaffold_report_manifest.py
-    scaffold_follow_up_tasks.py
-    smoke_tests.py
-    lease_utils.py          # shared internals, not CLI entry points
-    gate_hook_utils.py
-    follow_up_utils.py
+  references/               # state, task, artifact, gate, ownership, job, recovery contracts
+  scripts/                  # state validators, gates, leases/jobs, claim/report helpers
   examples/
 ```
+
+The skill's situation table is the maintained index of individual references and
+commands. Do not duplicate that inventory here.
 
 Projects using this protocol keep their live state under `.research/`:
 
@@ -77,6 +44,8 @@ Projects using this protocol keep their live state under `.research/`:
   project.yaml              # project metadata, approvals, assumptions, status
   tasks/
     T001.yaml               # one DAG node per task
+  jobs/
+    J-<uuid>.json           # authoritative scheduler-attempt history
   artifacts.jsonl           # output records with provenance and claims
   decisions.jsonl           # scientific and workflow decisions
   events.jsonl              # append-only state-change log
@@ -88,11 +57,8 @@ Task files route both execution and context. `skill` points to the procedure/too
 
 Execution tasks, especially HPC submission and monitoring, must have one active owner through the lease protocol. Planning and critique can involve multiple agents, but no task should be blindly submitted or rerun just because another session sees it as incomplete. Use `validate_state.py`, `ready_tasks.py`, `run_required_checks.py`, and lease reconciliation at handoff and recovery boundaries.
 
-Architecture diagrams and bilingual write-ups for this protocol live in the in-repo
-manuscript `dev/agentic-computational-chemistry-manuscript/` (its `figs/` carries the
-architecture, knowledge/tools split, skill-iteration, and holdout-evaluation figures);
-that manuscript is an explanatory deliverable, not the normative protocol. The normative
-files are the skill, references, scripts, examples, and this structure contract.
+The normative protocol is defined by the skill, references, scripts, examples, and
+this structure contract.
 
 ## Three loading tiers
 

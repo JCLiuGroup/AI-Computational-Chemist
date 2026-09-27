@@ -49,7 +49,7 @@ schema_version: 1
 gate: structure_gate
 status: pass
 scope:
-  reviewer_comments: [R1.1]
+  reviewer_comments: [R1.C1]
   artifacts: [candidate-structures]
 checks:
   - id: model_relevance

@@ -29,6 +29,9 @@ All bracketed values come from the cluster guide; never hardcode partition, modu
 #SBATCH --output=%x-%j.out
 #SBATCH --error=%x-%j.err
 
+[[ "${1:-}" != "--dry-run" ]] || { echo "Use: sbatch --test-only $0"; exit 0; }
+[[ -n "${SLURM_JOB_ID:-}" ]] || { echo "ERROR: use: sbatch $0" >&2; exit 2; }
+
 module purge
 module load <vasp-openacc-module>
 ulimit -s unlimited

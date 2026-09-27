@@ -67,7 +67,7 @@ gate: result_gate
 status: pass
 scope:
   claims: [scientific-claim]
-  reviewer_comments: [R1.1]
+  reviewer_comments: [R1.C1]
 claim_outcome: inconclusive
 checks:
   - id: parser_validation

@@ -2,13 +2,13 @@
 
 - **manuscript:** Enhanced thermal stability of Pt vs Au nanoparticle catalysts (FAKE fixture)
 - **fingerprint:** `method-fingerprint.md`
-- **objective:** answer R2.1 — does Pt resist vacancy formation more than Au?
+- **objective:** answer R2.C1 — does Pt resist vacancy formation more than Au?
 
 ## Reusable assets
 
 _(none reused here — both runs are cheap; in a real campaign shared slabs/gas refs would be listed here with the fingerprint they were built under)_
 
-## R2.1 — status: validated — outcome: addresses
+## R2.C1 — status: validated — outcome: addresses
 
 | stage | status | evidence |
 |---|---|---|

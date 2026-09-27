@@ -34,7 +34,7 @@ Command examples use the modern `gmx` wrapper. On MPI installations the executab
 | LINCS/SETTLE/Fatal error, topology mismatch, missing parameters, NaN, exploding box, checkpoint append failure | `references/errors.md` |
 | PBC repair, energy/structure/diffusion/interface/membrane/protein-ligand analysis | `references/analysis.md` |
 | load GROMACS trajectories in VMD; Tcl `atomselect`, dynamic `within`, pbctools, unit trap | `references/vmd-handoff.md` |
-| working examples to copy | `examples/` — verified cases only |
+| example contribution rules | `examples/README.md` |
 | official manuals, forums, force-field and parameterization links | `references/resources.md` |
 
 ## Workflow

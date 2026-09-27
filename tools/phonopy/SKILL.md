@@ -14,7 +14,7 @@ Pipeline: tightly relaxed structure → displacements → one static force run e
 | commands and settings for every pipeline step; per-displacement INCAR; BORN/NAC for polar materials | `references/running.md` |
 | imaginary modes — noise or real instability? what convergence to report | `references/validation.md` |
 | force-constant build fails, acoustic branches don't hit zero, spectrum looks wrong | `references/errors.md` |
-| working examples to copy and adapt | `examples/` |
+| example contribution rules | `examples/README.md` |
 | not covered locally (phonopy docs, examples, phono3py, seekpath) | `references/resources.md` |
 
 ## Hard guardrails

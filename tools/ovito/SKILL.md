@@ -25,7 +25,7 @@ Use this skill when the task is visual inspection, publication-style rendering, 
 | validate imported data, modifiers, image outputs, and quantitative summaries | `scripts/ovito_analyze.py`, `scripts/ovito_render.py`, then `references/validation.md` |
 | headless import/render fails, modifiers give wrong counts, colors or PBC look wrong | `references/errors.md` |
 | official user manual, Python API, modifiers, PyPI/conda install pages | `references/resources.md` |
-| worked examples to copy and adapt | `examples/` |
+| example contribution rules | `examples/README.md` |
 
 ## Workflow
 

@@ -1,0 +1,42 @@
+name: report
+version: 1.2.0
+description: >
+  Declarative routing map for AICC report assembly. SKILL.md remains the entry
+  point; this manifest tells agents which references to load for report mode,
+  figure need, and final QA instead of reading every report reference by habit.
+
+always_load:
+  - references/running.md
+  - references/validation.md
+
+axes:
+  report_mode:
+    detect: |
+      Use stage-synthesis when calculations are validated but claims are not yet
+      accepted or follow-up proposals remain open. Use final only when accepted
+      claims, explicit waivers, and report gates are available.
+    values:
+      stage-synthesis: []
+      final:
+        - references/final-package-checklist.md
+    default: stage-synthesis
+    multi: false
+
+  figure_need:
+    detect: |
+      If the report includes new figures or figure revisions, choose the figure
+      archetype before plotting and load only the relevant figure references.
+    values:
+      none: []
+      any:
+        - references/figure-contract.md
+        - references/figure-archetype-atlas.md
+        - references/computational-chemistry-figure-style.md
+        - references/figure-layout-qa.md
+    default: none
+    multi: false
+
+references:
+  on_demand:
+    - condition: generate Matplotlib AICC figures and diagnostics
+      path: scripts/aicc_figure_style.py

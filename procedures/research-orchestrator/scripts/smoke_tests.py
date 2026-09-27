@@ -1173,6 +1173,14 @@ def init_project_flow() -> None:
         print("PASS init_project")
 
 
+def aicc_cli_smoke_flow() -> None:
+    smoke = REPO_ROOT / "aicc" / "tests" / "smoke_test.py"
+    result = run([sys.executable, str(smoke)])
+    if "== aicc smoke: clean ==" not in result.stdout:
+        raise SystemExit("AICC smoke test did not report clean completion")
+    print("PASS aicc CLI integration")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--skip-cli", action="store_true", help="Skip mutating temp-directory CLI flows")
@@ -1194,6 +1202,7 @@ def main() -> int:
         structure_gate_input_warning_flow()
         scaffold_follow_up_flow()
         init_project_flow()
+        aicc_cli_smoke_flow()
     print("== smoke_tests: clean ==")
     return 0
 
